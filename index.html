@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Created as an example by https://github.com/mcphee11 Version 2.0 -->
+<!-- Created as an example by https://github.com/mcphee11 -->
 <html>
   <head>
     <meta name="robots" content="noindex" />
@@ -8,12 +8,12 @@
     <title></title>
     <meta name="Template" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Genesys CSS https://spark.genesys.com/ -->
-    <link href="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.css" rel="stylesheet" />
-    <script type="module" src="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.esm.js"></script>
     <!-- Genesys SDK info https://developer.genesys.cloud/ -->
     <script src="https://sdk-cdn.mypurecloud.com/javascript/latest/purecloud-platform-client-v2.min.js"></script>
-    <link href="http://fonts.googleapis.com/css?family=Roboto:400" rel="stylesheet" type="text/css" />
+    <!-- Google Roboto:Serif font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Roboto+Serif:opsz@8..144&display=swap" rel="stylesheet" />
   </head>
   <body onload="start()">
     <script>
@@ -36,7 +36,6 @@
 
       let platformClient = require('platformClient')
       const client = platformClient.ApiClient.instance
-      const uapi = new platformClient.UsersApi()
       const rapi = new platformClient.RoutingApi()
 
       async function start() {
@@ -47,11 +46,7 @@
           console.log('%cLogging in to Genesys Cloud', 'color: green')
           await client.loginImplicitGrant(gc_clientId, gc_redirectUrl, {})
 
-          //GET Current UserId
-          let user = await uapi.getUsersMe({})
-          console.log(user)
-
-          //Enter in starting code.
+          //make minimum refresh of API request min 15sec to stop 429 rate limts and API overage billing
           if (gc_refresh >= 15000) {
             checkEWT()
             setInterval(function () {
@@ -65,17 +60,18 @@
         } catch (err) {
           console.log('Error: ', err)
         }
-      } //End of start() function
+      }
 
       async function checkEWT() {
         let ewt = await rapi.getRoutingQueueMediatypeEstimatedwaittime(gc_queueId, gc_mediaType)
         console.log(ewt)
-
         for (const result of ewt.results) {
           if (result.intent === gc_mediaType.toUpperCase()) {
             document.getElementById('counter').innerText = result.estimatedWaitTimeSeconds
+            return
           }
         }
+        document.getElementById('counter').innerText = 'err'
       }
     </script>
     <div>
