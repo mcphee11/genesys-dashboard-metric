@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!-- Created as an example by https://github.com/mcphee11 Version 2.0 -->
+<html>
+  <head>
+    <meta name="robots" content="noindex" />
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title></title>
+    <meta name="Template" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Genesys CSS https://spark.genesys.com/ -->
+    <link href="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.css" rel="stylesheet" />
+    <script type="module" src="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.esm.js"></script>
+    <!-- Genesys SDK info https://developer.genesys.cloud/ -->
+    <script src="https://sdk-cdn.mypurecloud.com/javascript/latest/purecloud-platform-client-v2.min.js"></script>
+    <link href="http://fonts.googleapis.com/css?family=Roboto:400" rel="stylesheet" type="text/css" />
+  </head>
+  <body onload="start()">
+    <script>
+      'use strict' //Enables strict mode is JavaScript
+      let url = new URL(document.location.href)
+      let gc_region = url.searchParams.get('gc_region')
+      let gc_clientId = url.searchParams.get('gc_clientId')
+      let gc_redirectUrl = url.searchParams.get('gc_redirectUrl')
+      let gc_queueId = url.searchParams.get('gc_queueId')
+      let gc_mediaType = url.searchParams.get('gc_mediaType')
+      let gc_refresh = url.searchParams.get('gc_refresh')
+
+      //Getting and setting the GC details from dynamic URL and session storage
+      gc_region ? sessionStorage.setItem('gc_region', gc_region) : (gc_region = sessionStorage.getItem('gc_region'))
+      gc_clientId ? sessionStorage.setItem('gc_clientId', gc_clientId) : (gc_clientId = sessionStorage.getItem('gc_clientId'))
+      gc_redirectUrl ? sessionStorage.setItem('gc_redirectUrl', gc_redirectUrl) : (gc_redirectUrl = sessionStorage.getItem('gc_redirectUrl'))
+      gc_queueId ? sessionStorage.setItem('gc_queueId', gc_queueId) : (gc_queueId = sessionStorage.getItem('gc_queueId'))
+      gc_mediaType ? sessionStorage.setItem('gc_mediaType', gc_mediaType) : (gc_mediaType = sessionStorage.getItem('gc_mediaType'))
+      gc_refresh ? sessionStorage.setItem('gc_refresh', gc_refresh) : (gc_refresh = sessionStorage.getItem('gc_refresh'))
+
+      let platformClient = require('platformClient')
+      const client = platformClient.ApiClient.instance
+      const uapi = new platformClient.UsersApi()
+      const rapi = new platformClient.RoutingApi()
+
+      async function start() {
+        try {
+          client.setEnvironment(gc_region)
+          client.setPersistSettings(true, '_mm_')
+
+          console.log('%cLogging in to Genesys Cloud', 'color: green')
+          await client.loginImplicitGrant(gc_clientId, gc_redirectUrl, {})
+
+          //GET Current UserId
+          let user = await uapi.getUsersMe({})
+          console.log(user)
+
+          //Enter in starting code.
+          if (gc_refresh >= 15000) {
+            checkEWT()
+            setInterval(function () {
+              checkEWT()
+            }, gc_refresh)
+          }
+          if (gc_refresh < 14999) {
+            console.error('set the gc_refresh >= 15000')
+            document.getElementById('counter').innerText = 'err'
+          }
+        } catch (err) {
+          console.log('Error: ', err)
+        }
+      } //End of start() function
+
+      async function checkEWT() {
+        let ewt = await rapi.getRoutingQueueMediatypeEstimatedwaittime(gc_queueId, gc_mediaType)
+        console.log(ewt)
+
+        for (const result of ewt.results) {
+          if (result.intent === gc_mediaType.toUpperCase()) {
+            document.getElementById('counter').innerText = result.estimatedWaitTimeSeconds
+          }
+        }
+      }
+    </script>
+    <div>
+      <p id="counter" class="counterClass"></p>
+    </div>
+  </body>
+  <style>
+    .counterClass {
+      font-size: 125px;
+      font-family: 'Roboto', sans-serif;
+      color: rgb(63, 115, 215);
+      font-weight: 400;
+      line-height: normal;
+    }
+    div {
+      display: grid;
+      align-content: center;
+      height: 99dvh;
+      text-align: center;
+    }
+    body {
+      margin: 0px;
+      background-color: #2b2628;
+    }
+  </style>
+</html>
